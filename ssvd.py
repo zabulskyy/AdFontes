@@ -11,7 +11,7 @@ def shuffle_arr(A, block_size=(16, 16)):
     height, width = ((M - (M % m)) * (N - (N % n))) // (m * n), m * n
     X = np.zeros((height, width))
     for i in range(height):
-        s_x, s_y = (i * n) % (N - (N % n)), i // m * m
+        s_x, s_y = (i * n) % (N - (N % n)), (i * m) // M * m
         f_x, f_y = s_x + n, s_y + m
         TMP = A[s_y:f_y, s_x:f_x]
         if TMP.shape != block_size:
@@ -20,9 +20,10 @@ def shuffle_arr(A, block_size=(16, 16)):
     return X
 
 
-def reshuffle_arr(X, block_size=(16, 16)):
+def unshuffle_arr(X, old_size, block_size=(16, 16)):
     m, n = block_size
-    M, N = X.shape
+    M, N = old_size
+    M, N = M - (M % m), N - (N % n)
     height, width = M // m, N // n
     A = [None] * height
     for i in range(len(X)):
@@ -82,29 +83,53 @@ def SVD_to_A(U, S, VT):
     return A_RECOVERED
 
 
-def load_img(path='lena.jpg'):
-    im = Image.open(path)
+def weightedAverage(pixel):
+    return 0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]
+
+
+def rgb2grey(arr, size):
+    print("S", size)
+    h, w = size
+    print(h, w)
+    arr = arr.reshape(h, w, 3)  # ?
+    grey = np.zeros((h, w))  # ?
+    # get row number
+    for rownum in range(len(arr)):
+        for colnum in range(len(arr[rownum])):
+            grey[rownum][colnum] = weightedAverage(arr[rownum][colnum])
+    grey = grey.reshape(w, h)
+    return grey
+
+
+def load_img(path='lena.jpg', im_type='gray'):
+    if im_type.lower() == 'gray' or im_type.lower() == 'grey':
+        im = Image.open(path)
+
+    if im_type.lower() == 'rgb':
+        im = Image.open(path)
+
     return im
 
 
 def img_to_arr_colored(im):
     height, width = im.size
     arr = np.array(im.getdata())
-    arr = arr.T
+    arr = arr.reshape(3, height, width)
     r = arr[0]
     g = arr[1]
     b = arr[2]
-    print(r.shape)
-    r = r.reshape(height, width)
-    g = g.reshape(height, width)
-    b = b.reshape(height, width)
     return r, g, b
 
 
 def img_to_arr_grey(im):
-    height, width = im.size
-    arr = np.array(im.getdata())
-    arr = arr.reshape(height, width)
+    try:
+        w, h = im.size
+        arr = np.array(im.getdata())
+        arr = rgb2grey(arr, (h, w))  # ?
+    except:
+        height, width = im.size
+        arr = np.array(im.getdata())
+        arr = arr.reshape(height, width)
     return arr
 
 
@@ -117,45 +142,48 @@ def show_img(im):
     plt.show()
 
 
-def SSVD(file_name, rank=None, im_type='gray'):
+def SSVD(file_name, rank=None, im_type='gray', shuffled=True):
+    block_size = (16, 16)
     if im_type.lower() == 'rgb':
-        return SSVD_colored(file_name, rank)
+        return SSVD_colored(file_name, rank, block_size=block_size)
     if im_type.lower() == 'gray' or im_type.lower() == 'grey':
-        return SSVD_gray(file_name, rank)
+        return SSVD_gray(file_name, rank, block_size=block_size, shuffled=shuffled)
 
 
-def SSVD_colored(file_name, rank=None):
-    im = load_img(file_name)
+def SSVD_colored(file_name, rank=None, block_size=None):
+    im = load_img(file_name, im_type='rgb')
     h, w = im.size
-    # arr2 = np.array(im)
-    # arr2 = arr2.reshape(w, h, 3)
-    # im2 = arr_to_img(np.uint8(arr2))
-    # show_img(im2)
-    # print(im2.shape)
     r, g, b = img_to_arr_colored(im)
     res = []
     for arr in (r, g, b):
-        # arr = shuffle_arr(arr)
+        # arr = shuffle_arr(arr, block_size=block_size)
         U, S, VT = SVD(arr)
         U_r, S_r, VT_r = apply_rank(U, S, VT, rank)
         arr = SVD_to_A(U_r, S_r, VT_r)
-        # arr = reshuffle_arr(arr)
+        # arr = unshuffle_arr(arr, (h, w), block_size=block_size)
         res.append(arr)
+    new_h, new_w = res[0].shape
     new_im = np.array(res)
-    new_im = new_im.reshape(w, h, 3)
+    new_im = new_im.reshape(new_w, new_h, 3)
     return arr_to_img(np.uint8(new_im))
 
 
-def SSVD_gray(file_name, rank=None):
+def SSVD_gray(file_name, rank=None, block_size=None, shuffled=True):
     im = load_img(file_name)
+    h, w = im.size
     arr = img_to_arr_grey(im)
-    # arr = shuffle_arr(arr)
+    if shuffled:
+        arr = shuffle_arr(arr, block_size=block_size)
     U, S, VT = SVD(arr)
     U_r, S_r, VT_r = apply_rank(U, S, VT, rank)
     arr = SVD_to_A(U_r, S_r, VT_r)
-    # arr = reshuffle_arr(arr)
+    if shuffled:
+        arr = unshuffle_arr(arr, (h, w), block_size=block_size)
+    arr = arr.reshape(w, h)
     return arr_to_img(arr)
 
 
-new_im = SSVD('lena.jpg', im_type='gray')
-show_img(new_im)
+shuffled_im = SSVD('lena.jpg', im_type='gray', rank=10, shuffled=True)
+not_shuffled_im = SSVD('lena.jpg', im_type='gray', rank=10, shuffled=False)
+show_img(shuffled_im)
+show_img(not_shuffled_im)
