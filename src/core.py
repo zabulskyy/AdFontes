@@ -320,7 +320,7 @@ def compressor(file_name, rank=None, im_type='gray', compressor_type="SSVD", ver
     :param rank: int: rank, which will be applied in the SVD algorithm
     :param im_type: "rgb" | "grey"
     :param compressor_type: "SVD" | "SSVD"
-    :param verbose: boolean: use if you want to see all prints
+    :param verbose: boolean: True if you want to see all prints, False otherwise
     :return: Image
     """
     shuffled = compressor_type.lower() == "ssvd"
