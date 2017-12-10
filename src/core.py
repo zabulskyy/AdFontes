@@ -6,13 +6,14 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def shuffle_arr(A, block_size=(16, 16), verbose=False):
+def _shuffle_arr(A, block_size=(16, 16), verbose=False):
     """
-    shuffle array A
-    :param A:
-    :param block_size:
-    :param verbose:
-    :return:
+    preprocessing shuffle array A due to SSVD algorithm
+    breaking on blocks and stretch each block to row
+    :param A: numpy.array
+    :param block_size: tuple(int, int)
+    :param verbose: boolean
+    :return: numpy.array
     """
     M, N = A.shape
     m, n = block_size
@@ -28,7 +29,15 @@ def shuffle_arr(A, block_size=(16, 16), verbose=False):
     return X
 
 
-def reshuffle_arr(X, old_size, block_size=(16, 16), verbose=False):
+def _reshuffle_arr(X, old_size, block_size=(16, 16), verbose=False):
+    """
+    postprocessing shuffle array A due to SSVD algorithm
+    :param X: numpy.array
+    :param old_size: tuple(int, int)
+    :param block_size: tuple(int, int)
+    :param verbose: boolean
+    :return: numpy.array
+    """
     m, n = block_size
     M, N = old_size
     M, N = M - (M % m), N - (N % n)
@@ -46,37 +55,73 @@ def reshuffle_arr(X, old_size, block_size=(16, 16), verbose=False):
     return res
 
 
-def dot_D_A(d, c):
-    return np.array([c[i] * d[i] for i in range(len(d))])
+def _dot_D_A(d, A):
+    """
+    dot product of diagonal matrix (one-dimensional) and matrix
+    :param d: numpy.array
+    :param A: numpy.array
+    :return: numpy.array
+    """
+    return np.array([A[i] * d[i] for i in range(len(d))])
 
 
 def SVD(A, verbose=False):
-    AAT = np.dot(A, A.T)
+    """
+    SVD algorithm
+    :param A: numpy.array
+    :param verbose: boolean
+    :return: numpy.array, numpy.array, numpy.array
+    """
+
+    # (A^T)A
     ATA = np.dot(A.T, A)
 
+    # find eigenvectors and eigenvalues of (A^T)A
     eigvals_ATA, eigvecs_ATA = np.linalg.eig(ATA)
 
+    # eigenvectors are columns of a matrix eigvecs_ATA, but it is easier to iterate rows
     eigvecs_ATA = eigvecs_ATA.T
+
+    # sort eigenvectors with respect to sorted eigenvalues
     eigvecs_ATA = np.array(
         [x for _, x in sorted(zip(eigvals_ATA, eigvecs_ATA), key=lambda pair: pair[0], reverse=True)])
+
+    # back to proper form
     eigvecs_ATA = eigvecs_ATA.T
 
+    # get rid of negative eigenvalues and eigenvalues close to zero
     eigvals_ATA = np.array([x for x in eigvals_ATA if x > 1e-8])
+
+    # find singular values
     sing_ATA = np.sqrt(eigvals_ATA)
 
-    S = np.array(sorted(sing_ATA, reverse=True))  # HURRAY
+    # find S
+    S = np.array(sorted(sing_ATA, reverse=True))
 
-    VT = eigvecs_ATA.T  # HURRAY
+    # find V^T
+    VT = eigvecs_ATA.T
 
+    # find U^T from equation A = U*S*V.T
     UT = np.zeros((len(S), len(A)))
     for i in range(len(S)):
         d = np.dot((1 / S[i]), A)
         UT[i] = np.dot(d, VT[i])
-    U = UT.T  # HURRAY
+
+    # find U
+    U = UT.T
     return U, S, VT
 
 
-def apply_rank(U, S, VT, r, verbose=False):
+def _apply_rank(U, S, VT, r, verbose=False):
+    """
+    apply rank r due to SVD algorithm
+    :param U: numpy.array
+    :param S: numpy.array
+    :param VT: numpy.array
+    :param r: int
+    :param verbose: boolean
+    :return: numpy.array, numpy.array, numpy.array
+    """
     if r is None:
         r = len(S)
     S_r = S[:r]
@@ -87,12 +132,26 @@ def apply_rank(U, S, VT, r, verbose=False):
     return U_r, S_r, VT_r
 
 
-def SVD_to_A(U, S, VT):
-    A = np.dot(U, dot_D_A(S, VT))
+def _SVD_to_A(U, S, VT):
+    """
+    multiply U, S and VT, due to last step of SVD algorithm
+    :param U: numpy.array
+    :param S: numpy.array
+    :param VT: numpy.array
+    :return: numpy.array
+    """
+    A = np.dot(U, _dot_D_A(S, VT))
     return A
 
 
-def rgb_to_grey(arr, size, verbose=False):
+def _rgb_to_grey(arr, size, verbose=False):
+    """
+    convert color RGB array to greyscale array
+    :param arr: numpy.array
+    :param size: tuple(int, int)
+    :param verbose: boolean
+    :return: numpy.array
+    """
 
     def weighted_average(pixel):
         return 0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]
@@ -108,11 +167,23 @@ def rgb_to_grey(arr, size, verbose=False):
     return grey
 
 
-def load_img(path='lena.jpg', verbose=False):
+def _load_img(path='lena.jpg', verbose=False):
+    """
+    open image
+    :param path: string
+    :param verbose: boolean
+    :return: Image
+    """
     return Image.open(path)
 
 
-def colored_img_to_arr(image, verbose=False):
+def _colored_img_to_arr(image, verbose=False):
+    """
+    convert RGB Image to an array
+    :param image: Image
+    :param verbose: boolean
+    :return:
+    """
     height, width = image.size
     arr = np.array(image.getdata())
     arr = arr.reshape(3, height, width)
@@ -122,11 +193,17 @@ def colored_img_to_arr(image, verbose=False):
     return r, g, b
 
 
-def grey_img_to_arr(image, verbose=False):
+def _grey_img_to_arr(image, verbose=False):
+    """
+    convert greyscale Image to an array
+    :param image: Image
+    :param verbose: boolean
+    :return:
+    """
     try:
         w, h = image.size
         arr = np.array(image.getdata())
-        arr = rgb_to_grey(arr, (h, w), verbose=verbose)
+        arr = _rgb_to_grey(arr, (h, w), verbose=verbose)
         if verbose:
             print("Converted from RGB to grayscale")
     except:
@@ -136,34 +213,44 @@ def grey_img_to_arr(image, verbose=False):
     return arr
 
 
-def arr_to_img(arr, verbose=False):
+def _arr_to_img(arr, verbose=False):
+    """
+    convert arr to an Image
+    :param arr: Image
+    :param verbose: boolean
+    :return: Image
+    """
     return Image.fromarray(arr)
 
 
 def show_img(image):
+    """
+    print Image
+    :param image: Image
+    :return: Image
+    """
     plt.imshow(image)
     plt.show()
+    return image
 
 
-def compressor(file_name, rank=None, im_type='gray', compressor_type="SSVD", verbose=False):
-    shuffled = compressor_type.lower() == "ssvd"
-    block_size = (16, 16)
-    if verbose:
-        print("\nImage processing...\n")
-    if im_type.lower() == 'rgb':
-        return compressor_for_color_img(file_name, rank, block_size=block_size, shuffled=shuffled, verbose=verbose)
-    if im_type.lower() == 'gray' or im_type.lower() == 'grey':
-        return compressor_for_gray_img(file_name, rank, block_size=block_size, shuffled=shuffled, verbose=verbose)
-
-
-def compressor_for_color_img(file_name, rank=None, block_size=None, shuffled=True, verbose=False):
-    image = load_img(file_name, verbose=verbose)
+def _compressor_for_color_img(file_name, rank=None, block_size=None, shuffled=True, verbose=False):
+    """
+    compressor for color images
+    :param file_name: string
+    :param rank: int
+    :param block_size: tuple(int, int)
+    :param shuffled: boolean
+    :param verbose: boolean
+    :return: Image
+    """
+    image = _load_img(file_name, verbose=verbose)
     height, width = image.size
     if shuffled:
         height, width = image.size
         square_root = int((height * width) ** 0.5)
         image = image.resize((square_root, square_root))
-    r, g, b = colored_img_to_arr(image, verbose=verbose)
+    r, g, b = _colored_img_to_arr(image, verbose=verbose)
     res = []
     for i, arr in enumerate((r, g, b)):
         if verbose:
@@ -174,49 +261,73 @@ def compressor_for_color_img(file_name, rank=None, block_size=None, shuffled=Tru
             else:
                 print("Blue color processing..")
         if shuffled:
-            arr = shuffle_arr(arr, block_size=block_size, verbose=verbose)
+            arr = _shuffle_arr(arr, block_size=block_size, verbose=verbose)
         U, S, VT = SVD(arr, verbose=verbose)
-        U_r, S_r, VT_r = apply_rank(U, S, VT, rank, verbose=verbose)
-        arr = SVD_to_A(U_r, S_r, VT_r)
+        U_r, S_r, VT_r = _apply_rank(U, S, VT, rank, verbose=verbose)
+        arr = _SVD_to_A(U_r, S_r, VT_r)
         if shuffled:
-            arr = reshuffle_arr(arr, (square_root, square_root), block_size=block_size, verbose=verbose)
+            arr = _reshuffle_arr(arr, (square_root, square_root), block_size=block_size, verbose=verbose)
         arr[(arr > 255)] = 255
         arr[(arr < 0)] = 0
         res.append(arr)
     new_h, new_w = res[0].shape
     new_im = np.array(res)
     new_im = new_im.reshape(new_w, new_h, 3)
-    image = arr_to_img(np.uint8(new_im), verbose=verbose)
+    image = _arr_to_img(np.uint8(new_im), verbose=verbose)
     if shuffled:
         image = image.resize((height, width))
     return image
 
 
-def compressor_for_gray_img(file_name, rank=None, block_size=None, shuffled=True, verbose=False):
+def _compressor_for_gray_img(file_name, rank=None, block_size=None, shuffled=True, verbose=False):
+    """
+    compressor for grey images
+    :param file_name: string
+    :param rank: int
+    :param block_size: tuple(int, int)
+    :param shuffled: boolean
+    :param verbose: boolean
+    :return: Image
+    """
     square_root = None
-    image = load_img(file_name, verbose=verbose)
+    image = _load_img(file_name, verbose=verbose)
     height, width = image.size
     if shuffled:
         height, width = image.size
         square_root = int((height * width) ** 0.5)
         image = image.resize((square_root, square_root))
-    arr = grey_img_to_arr(image, verbose=verbose)
+    arr = _grey_img_to_arr(image, verbose=verbose)
     if shuffled:
-        arr = shuffle_arr(arr, block_size=block_size, verbose=verbose)
+        arr = _shuffle_arr(arr, block_size=block_size, verbose=verbose)
     U, S, VT = SVD(arr, verbose=verbose)
-    U_r, S_r, VT_r = apply_rank(U, S, VT, rank, verbose=verbose)
-    arr = SVD_to_A(U_r, S_r, VT_r)
+    U_r, S_r, VT_r = _apply_rank(U, S, VT, rank, verbose=verbose)
+    arr = _SVD_to_A(U_r, S_r, VT_r)
     if shuffled:
-        arr = reshuffle_arr(arr, (square_root, square_root), block_size=block_size, verbose=verbose)
-        image = arr_to_img(arr, verbose=verbose)
+        arr = _reshuffle_arr(arr, (square_root, square_root), block_size=block_size, verbose=verbose)
+        image = _arr_to_img(arr, verbose=verbose)
         image = image.resize((height, width))
         return image
     height, width = arr.shape
     arr = arr.reshape(width, height)
-    return arr_to_img(arr, verbose=verbose)
+    return _arr_to_img(arr, verbose=verbose)
 
 
-not_shuffled_im = compressor('grid.jpg', im_type='gray', rank=100, compressor_type="SVD", verbose=False)
-shuffled_im = compressor('grid.jpg', im_type='gray', rank=100, compressor_type="SSVD", verbose=False)
-show_img(not_shuffled_im)
-show_img(shuffled_im)
+def compressor(file_name, rank=None, im_type='gray', compressor_type="SSVD", verbose=False):
+    """
+    main function
+    calls functions, depending on arguments
+    :param file_name: string
+    :param rank: int: rank, which will be applied in the SVD algorithm
+    :param im_type: "rgb" | "grey"
+    :param compressor_type: "SVD" | "SSVD"
+    :param verbose: boolean: use if you want to see all prints
+    :return: Image
+    """
+    shuffled = compressor_type.lower() == "ssvd"
+    block_size = (16, 16)
+    if verbose:
+        print("\nImage processing...\n")
+    if im_type.lower() == 'rgb':
+        return _compressor_for_color_img(file_name, rank, block_size=block_size, shuffled=shuffled, verbose=verbose)
+    if im_type.lower() == 'gray' or im_type.lower() == 'grey':
+        return _compressor_for_gray_img(file_name, rank, block_size=block_size, shuffled=shuffled, verbose=verbose)

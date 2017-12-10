@@ -156,11 +156,11 @@ def SSVD_colored(file_name, rank=None, block_size=None):
     r, g, b = img_to_arr_colored(im)
     res = []
     for arr in (r, g, b):
-        # arr = shuffle_arr(arr, block_size=block_size)
+        # arr = _shuffle_arr(arr, block_size=block_size)
         U, S, VT = SVD(arr)
         U_r, S_r, VT_r = apply_rank(U, S, VT, rank)
         arr = SVD_to_A(U_r, S_r, VT_r)
-        # arr = reshuffle_arr(arr, (h, w), block_size=block_size)
+        # arr = _reshuffle_arr(arr, (h, w), block_size=block_size)
         res.append(arr)
     new_h, new_w = res[0].shape
     new_im = np.array(res)
