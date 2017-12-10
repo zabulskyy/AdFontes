@@ -231,7 +231,6 @@ def show_img(image):
     """
     plt.imshow(image)
     plt.show()
-    return image
 
 
 def _compressor_for_color_img(file_name, rank=None, block_size=None, shuffled=True, verbose=False):
@@ -320,7 +319,7 @@ def compressor(file_name, rank=None, im_type='gray', compressor_type="SSVD", ver
     :param rank: int: rank, which will be applied in the SVD algorithm
     :param im_type: "rgb" | "grey"
     :param compressor_type: "SVD" | "SSVD"
-    :param verbose: boolean: True if you want to see all prints, False otherwise
+    :param verbose: boolean: True if you want to see all prints
     :return: Image
     """
     shuffled = compressor_type.lower() == "ssvd"
