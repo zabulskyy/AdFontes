@@ -136,7 +136,7 @@ def arr_to_img(arr):
     return Image.fromarray(arr)
 
 def show_img(im):
-    plt.imshow(im, cmap='gray')
+    plt.imshow(im)
     plt.show()
 
     
@@ -208,7 +208,7 @@ def SSVD_gray(file_name, rank=None, block_size=None, shuffled=True):
     arr = arr.reshape(w, h)
     return arr_to_img(arr)
 
-not_shuffled_im = SSVD('boy.jpg', im_type='gray', rank=100, shuffled=False)
-shuffled_im = SSVD('boy.jpg', im_type='gray', rank=100, shuffled=True)
-show_img(not_shuffled_im)
-show_img(shuffled_im)
+# not_shuffled_im = SSVD('boy.jpg', im_type='gray', rank=100, shuffled=False)
+# shuffled_im = SSVD('boy.jpg', im_type='gray', rank=100, shuffled=True)
+# show_img(not_shuffled_im)
+# show_img(shuffled_im)

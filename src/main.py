@@ -136,7 +136,7 @@ def arr_to_img(arr):
     return Image.fromarray(arr)
 
 def show_img(im):
-    plt.imshow(im, cmap='gray')
+    plt.imshow(im)
     plt.show()
 
     
