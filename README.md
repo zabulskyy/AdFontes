@@ -1,2 +1,2 @@
 # AdFontes
-### SSVD image compression
+### compressor image compression

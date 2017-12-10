@@ -160,7 +160,7 @@ def SSVD_colored(file_name, rank=None, block_size=None):
         U, S, VT = SVD(arr)
         U_r, S_r, VT_r = apply_rank(U, S, VT, rank)
         arr = SVD_to_A(U_r, S_r, VT_r)
-        # arr = unshuffle_arr(arr, (h, w), block_size=block_size)
+        # arr = reshuffle_arr(arr, (h, w), block_size=block_size)
         res.append(arr)
     new_h, new_w = res[0].shape
     new_im = np.array(res)
